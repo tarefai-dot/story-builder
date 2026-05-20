@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<title>Journeyman Story Builder</title>
+
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    font-family:Inter,Helvetica,Arial,sans-serif;
+    background:#f5f5f5;
+    overflow:hidden;
+}
+
+/* =========================================
+   LAYOUT
+========================================= */
+
+#app{
+    display:flex;
+    height:100vh;
+    width:100%;
+}
+
+/* =========================================
+   SIDEBAR
+========================================= */
+
+#sidebar{
+    width:320px;
+    background:#111;
+    color:#fff;
+    display:flex;
+    flex-direction:column;
+    border-right:1px solid #222;
+}
+
+#sidebarHeader{
+    padding:20px;
+    border-bottom:1px solid #222;
+}
+
+#sidebarHeader h2{
+    margin:0;
+    font-size:20px;
+    font-weight:700;
+}
+
+#addButtons{
+    padding:15px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    border-bottom:1px solid #222;
+}
+
+.addBtn{
+    border:none;
+    border-radius:10px;
+    padding:12px;
+    background:#222;
+    color:#fff;
+    cursor:pointer;
+    font-size:14px;
+    transition:0.2s;
+}
+
+.addBtn:hover{
+    background:#333;
+}
+
+#blockTree{
+    flex:1;
+    overflow:auto;
+    padding:10px;
+}
+
+.treeItem{
+    background:#1a1a1a;
+    border:1px solid #2d2d2d;
+    border-radius:12px;
+    padding:12px;
+    margin-bottom:10px;
+    cursor:grab;
+    transition:0.2s;
+}
+
+.treeItem:hover{
+    background:#222;
+}
+
+.treeItem.active{
+    border:1px solid #4da3ff;
+    background:#1e2b38;
+}
+
+.treeTitle{
+    font-size:14px;
+    font-weight:600;
+    margin-bottom:4px;
+}
+
+.treeMeta{
+    font-size:12px;
+    opacity:0.7;
+}
+
+#saveBar{
+    padding:15px;
+    border-top:1px solid #222;
+}
+
+#saveDraftBtn{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:14px;
+    background:#4da3ff;
+    color:#fff;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+#saveStatus{
+    margin-top:10px;
+    font-size:12px;
+    opacity:0.8;
+    text-align:center;
+}
+
+/* =========================================
+   EDITOR
+========================================= */
+
+#editor{
+    flex:1;
+    overflow:auto;
+    padding:40px;
+}
+
+.editorBlock{
+    background:#fff;
+    border-radius:20px;
+    padding:25px;
+    margin-bottom:25px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+    border:2px solid transparent;
+}
+
+.editorBlock.active{
+    border:2px solid #4da3ff;
+}
+
+.blockTop{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.blockLabel{
+    font-size:13px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:#666;
+}
+
+.deleteBtn{
+    border:none;
+    background:#f2f2f2;
+    border-radius:8px;
+    padding:8px 12px;
+    cursor:pointer;
+}
+
+/* =========================================
+   INPUTS
+========================================= */
+
+input,
+textarea{
+    width:100%;
+    border:1px solid #ddd;
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:14px;
+    font-size:15px;
+    font-family:inherit;
+}
+
+textarea{
+    resize:vertical;
+    min-height:140px;
+}
+
+.mediaPreview{
+    width:100%;
+    border-radius:16px;
+    margin-top:15px;
+}
+
+.uploadRow{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.uploadBtn{
+    background:#111;
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:10px 14px;
+    cursor:pointer;
+}
+
+.smallText{
+    font-size:12px;
+    color:#777;
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media(max-width:900px){
+
+    #app{
+        flex-direction:column;
+    }
+
+    #sidebar{
+        width:100%;
+        height:320px;
+    }
+
+    #editor{
+        padding:20px;
+    }
+
+}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+
+        <div id="sidebarHeader">
+            <h2>Story Builder</h2>
+        </div>
+
+        <div id="addButtons">
+
+            <button class="addBtn" onclick="addTextBlock()">
+                <i class="fa-solid fa-align-left"></i>
+                Add Text
+            </button>
+
+            <button class="addBtn" onclick="addImageBlock()">
+                <i class="fa-solid fa-image"></i>
+                Add Image
+            </button>
+
+            <button class="addBtn" onclick="addVideoBlock()">
+                <i class="fa-solid fa-video"></i>
+                Add Video
+            </button>
+
+        </div>
+
+        <div id="blockTree"></div>
+
+        <div id="saveBar">
+            <button id="saveDraftBtn">
+                Save Draft
+            </button>
+
+            <div id="saveStatus">
+                Ready
+            </div>
+        </div>
+
+    </div>
+
+    <!-- EDITOR -->
+    <div id="editor"></div>
+
+</div>
+
+<script>
+
+/* =========================================
+   CONFIG
+========================================= */
+
+const IMGBB_API_KEY = "YOUR_IMGBB_API_KEY";
+
+/* =========================================
+   STATE
+========================================= */
+
+let blocks = [];
+
+let activeBlockId = null;
+
+/* =========================================
+   HELPERS
+========================================= */
+
+function uid() {
+    return 'blk_' + Date.now() + '_' + Math.random().toString(36).substring(2,8);
+}
+
+function saveStatus(text){
+    document.getElementById('saveStatus').innerText = text;
+}
+
+function getBlockTitle(block){
+
+    if(block.type === 'text'){
+        return block.title || 'Untitled Text';
+    }
+
+    if(block.type === 'image'){
+        return block.caption || 'Image';
+    }
+
+    if(block.type === 'video'){
+        return block.caption || 'Video';
+    }
+
+    return 'Block';
+}
+
+/* =========================================
+   ADD BLOCKS
+========================================= */
+
+function addTextBlock(){
+
+    blocks.push({
+        id: uid(),
+        type: 'text',
+        title: '',
+        subheading: '',
+        paragraph: '',
+        quote: ''
+    });
+
+    refreshUI();
+}
+
+function addImageBlock(){
+
+    blocks.push({
+        id: uid(),
+        type: 'image',
+        imageUrl: '',
+        caption: ''
+    });
+
+    refreshUI();
+}
+
+function addVideoBlock(){
+
+    blocks.push({
+        id: uid(),
+        type: 'video',
+        videoUrl: '',
+        caption: ''
+    });
+
+    refreshUI();
+}
+
+/* =========================================
+   DELETE
+========================================= */
+
+function deleteBlock(id){
+
+    blocks = blocks.filter(b => b.id !== id);
+
+    refreshUI();
+}
+
+/* =========================================
+   SELECT
+========================================= */
+
+function selectBlock(id){
+
+    activeBlockId = id;
+
+    refreshUI();
+
+    const el = document.getElementById(id);
+
+    if(el){
+        el.scrollIntoView({
+            behavior:'smooth',
+            block:'center'
+        });
+    }
+}
+
+/* =========================================
+   TREE
+========================================= */
+
+function renderTree(){
+
+    const tree = document.getElementById('blockTree');
+
+    tree.innerHTML = '';
+
+    blocks.forEach(block => {
+
+        const div = document.createElement('div');
+
+        div.className = 'treeItem';
+
+        if(block.id === activeBlockId){
+            div.classList.add('active');
+        }
+
+        div.dataset.id = block.id;
+
+        div.innerHTML = `
+            <div class="treeTitle">
+                ${getBlockTitle(block)}
+            </div>
+
+            <div class="treeMeta">
+                ${block.type.toUpperCase()}
+            </div>
+        `;
+
+        div.onclick = () => selectBlock(block.id);
+
+        tree.appendChild(div);
+
+    });
+
+    new Sortable(tree, {
+
+        animation:150,
+
+        onEnd:(evt)=>{
+
+            const moved = blocks.splice(evt.oldIndex,1)[0];
+
+            blocks.splice(evt.newIndex,0,moved);
+
+            refreshUI(false);
+
+        }
+
+    });
+
+}
+
+/* =========================================
+   EDITOR
+========================================= */
+
+function renderEditor(){
+
+    const editor = document.getElementById('editor');
+
+    editor.innerHTML = '';
+
+    blocks.forEach(block => {
+
+        const wrap = document.createElement('div');
+
+        wrap.className = 'editorBlock';
+
+        if(block.id === activeBlockId){
+            wrap.classList.add('active');
+        }
+
+        wrap.id = block.id;
+
+        let html = `
+            <div class="blockTop">
+
+                <div class="blockLabel">
+                    ${block.type} block
+                </div>
+
+                <button class="deleteBtn"
+                        onclick="deleteBlock('${block.id}')">
+                    Delete
+                </button>
+
+            </div>
+        `;
+
+        /* ==============================
+           TEXT
+        ============================== */
+
+        if(block.type === 'text'){
+
+            html += `
+
+                <input
+                    type="text"
+                    placeholder="Title"
+                    value="${block.title || ''}"
+                    onchange="updateText('${block.id}','title',this.value)"
+                />
+
+                <input
+                    type="text"
+                    placeholder="Subheading"
+                    value="${block.subheading || ''}"
+                    onchange="updateText('${block.id}','subheading',this.value)"
+                />
+
+                <textarea
+                    placeholder="Paragraph"
+                    onchange="updateText('${block.id}','paragraph',this.value)"
+                >${block.paragraph || ''}</textarea>
+
+                <textarea
+                    placeholder="Quote"
+                    onchange="updateText('${block.id}','quote',this.value)"
+                >${block.quote || ''}</textarea>
+
+            `;
+        }
+
+        /* ==============================
+           IMAGE
+        ============================== */
+
+  if(block.type === 'image'){
+
+    html += `
+        <div class="uploadRow">
+            <input
+                type="text"
+                id="imgUrl_${block.id}"
+                placeholder="Image URL"
+                value="${block.imageUrl || ''}"
+                oninput="updateText('${block.id}','imageUrl',this.value)"
+            />
+            <button class="uploadBtn"
+                onclick="setUrl('${block.id}','imageUrl','imgUrl_${block.id}')">
+                Set
+            </button>
+            <input type="file" accept="image/*"
+                onchange="uploadImage(event,'${block.id}')" />
+        </div>
+
+        <input
+            type="text"
+            placeholder="Caption"
+            value="${block.caption || ''}"
+            oninput="updateText('${block.id}','caption',this.value)"
+        />
+    `;
+
+    if(block.imageUrl){
+        html += `<img class="mediaPreview" src="${block.imageUrl}" />`;
+    }
+}
+
+        /* ==============================
+           VIDEO
+        ============================== */
+
+  if(block.type === 'video'){
+
+    html += `
+        <div class="uploadRow">
+            <input
+                type="text"
+                id="vidUrl_${block.id}"
+                placeholder="Video URL"
+                value="${block.videoUrl || ''}"
+                oninput="updateText('${block.id}','videoUrl',this.value)"
+            />
+            <button class="uploadBtn"
+                onclick="setUrl('${block.id}','videoUrl','vidUrl_${block.id}')">
+                Set
+            </button>
+        </div>
+
+        <div class="smallText">
+            Recommended: YouTube / Vimeo / Bunny Stream
+        </div>
+
+        <input
+            type="text"
+            placeholder="Caption"
+            value="${block.caption || ''}"
+            oninput="updateText('${block.id}','caption',this.value)"
+        />
+    `;
+}
+
+function setUrl(blockId, key, inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    updateText(blockId, key, input.value);
+    refreshUI();
+}
+
+/* =========================================
+   UPDATE
+========================================= */
+
+function updateText(id,key,value){
+
+    const block = blocks.find(b => b.id === id);
+
+    if(!block) return;
+
+    block[key] = value;
+
+    renderTree();
+}
+
+/* =========================================
+   IMG UPLOAD
+========================================= */
+
+async function uploadImage(event, blockId){
+
+    const file = event.target.files[0];
+
+    if(!file) return;
+
+    saveStatus('Uploading image...');
+
+    try{
+
+        const formData = new FormData();
+
+        formData.append('image', file);
+
+        const response = await fetch(
+            `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+            {
+                method:'POST',
+                body:formData
+            }
+        );
+
+        const data = await response.json();
+
+        if(data.success){
+
+            const block = blocks.find(b => b.id === blockId);
+
+            if(block){
+
+                block.imageUrl = data.data.url;
+
+                refreshUI();
+
+                saveStatus('Image uploaded');
+
+            }
+
+        }
+
+    }catch(err){
+
+        console.error(err);
+
+        saveStatus('Upload failed');
+
+    }
+
+}
+
+/* =========================================
+   SAVE
+========================================= */
+
+document.getElementById('saveDraftBtn')
+.addEventListener('click', ()=>{
+
+    saveStatus('Saving...');
+
+    window.parent.postMessage({
+
+        type:'saveDraft',
+
+        blocks
+
+    }, '*');
+
+    setTimeout(()=>{
+        saveStatus('Draft saved');
+    },500);
+
+});
+
+
+/* =========================================
+   REFRESH
+========================================= */
+
+function refreshUI(scroll=true){
+
+    renderTree();
+
+    renderEditor();
+
+    if(scroll && blocks.length > 0){
+
+        activeBlockId = blocks[blocks.length - 1].id;
+    }
+
+}
+
+/* =========================================
+   INITIAL
+========================================= */
+
+refreshUI();
+  
+  window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || !data.type) return;
+    if (data.type === 'loadDraft') {
+        blocks = data.blocks || [];
+        refreshUI();
+    }
+    // Add this:
+    if (data.type === 'requestSave') {
+         document.querySelectorAll('input, textarea').forEach(el => el.blur());
+    window.parent.postMessage({ type: 'saveDraft', blocks }, '*');
+    }
+});
+
+</script>
+
+</body>
+</html>
